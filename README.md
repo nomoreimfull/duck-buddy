@@ -1,371 +1,107 @@
-# Flock You OLED: Flock Safety Detection System, now with a screen!
+# 🦆 Duck Buddy — A Wearable Flock Safety Detector Plushie
 
-<img src="flock.png" alt="Flock You" width="300px">
-<img src="oled.jpg" alt="Detection displayed on OLED screen" width="300px">
-
-**Originally based on the Oui-Spy device (available at [colonelpanic.tech](https://colonelpanic.tech))**
-**now runs on ESP32-C3 0.42 OLED, thanks to [kevin's page](https://emalliab.wordpress.com/2025/02/12/esp32-c3-0-42-oled/) for providing documentation on how to use the screen.**
-
-## Overview
-
-Flock You is an advanced detection system designed to identify Flock Safety surveillance cameras, Raven gunshot detectors, and similar surveillance devices using multiple detection methodologies. Built for the Xiao ESP32 C3 microcontroller, it provides real-time monitoring with audio alerts and comprehensive JSON output. The system now includes specialized BLE service UUID fingerprinting for detecting SoundThinking/ShotSpotter Raven acoustic surveillance devices.
-I adapted it to run on an ESP32-C3 and made it display details of the latest detection on a tiny screen!
-
-## Features
-
-### Multi-Method Detection
-- **WiFi Promiscuous Mode**: Captures probe requests and beacon frames
-- **Bluetooth Low Energy (BLE) Scanning**: Monitors BLE advertisements
-- **MAC Address Filtering**: Detects devices by known MAC prefixes
-- **SSID Pattern Matching**: Identifies networks by specific names
-- **Device Name Pattern Matching**: Detects BLE devices by advertised names
-- **BLE Service UUID Detection**: Identifies Raven gunshot detectors by service UUIDs (NEW)
-
-### Audio Alert System
-- **Boot Sequence**: 2 beeps (low pitch → high pitch) on startup
-- **Detection Alert**: 3 fast high-pitch beeps when device detected
-- **Heartbeat Pulse**: 2 beeps every 10 seconds while device remains in range
-- **Range Monitoring**: Automatic detection of device leaving range
-
-### Comprehensive Output
-- **JSON Detection Data**: Structured output with timestamps, RSSI, MAC addresses
-- **Real-time Web Dashboard**: Live monitoring at `http://localhost:5000`
-- **Serial Terminal**: Real-time device output in the web interface
-- **Detection History**: Persistent storage and export capabilities (CSV, KML)
-- **Device Information**: Full device details including signal strength and threat assessment
-- **Detection Method Tracking**: Identifies which detection method triggered the alert
-
-## Hardware Requirements
-
-### Option 1: Oui-Spy Device (Available at colonelpanic.tech)
-- **Microcontroller**: Xiao ESP32 S3
-- **Wireless**: Dual WiFi/BLE scanning capabilities
-- **Audio**: Built-in buzzer system
-- **Connectivity**: USB-C for programming and power
-
-### Option 2: Standard Xiao ESP32 S3 Setup
-- **Microcontroller**: Xiao ESP32 S3 board
-- **Buzzer**: 3V buzzer connected to GPIO3 (D2)
-- **Power**: USB-C cable for programming and power
-
-### Wiring for Standard Setup
-```
-Xiao ESP32 S3    Buzzer
-GPIO3 (D2)  ---> Positive (+)
-GND         ---> Negative (-)
-```
-
-## Installation
-
-### Prerequisites
-- PlatformIO IDE or PlatformIO Core
-- Python 3.8+ (for web interface)
-- USB-C cable for programming
-- Oui-Spy device from [colonelpanic.tech](https://colonelpanic.tech)
-
-### Setup Instructions
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd flock-you
-   ```
-
-2. **Connect your Oui-Spy device** via USB-C
-
-3. **Flash the firmware**:
-   ```bash
-   pio run --target upload
-   ```
-
-4. **Set up the web interface**:
-   ```bash
-   cd api
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-
-5. **Start the web server**:
-   ```bash
-   python flockyou.py
-   ```
-
-6. **Access the dashboard**:
-   - Open your browser to `http://localhost:5000`
-   - The web interface provides real-time detection monitoring
-   - Serial terminal for device output
-   - Detection history and export capabilities
-
-7. **Monitor device output** (optional):
-   ```bash
-   pio device monitor
-   ```
-
-## Detection Coverage
-
-### WiFi Detection Methods
-- **Probe Requests**: Captures devices actively searching for networks
-- **Beacon Frames**: Monitors network advertisements
-- **Channel Hopping**: Cycles through all 13 WiFi channels (2.4GHz)
-- **SSID Patterns**: Detects networks with "flock", "Penguin", "Pigvision" patterns
-- **MAC Prefixes**: Identifies devices by manufacturer MAC addresses
-
-### BLE Detection Methods
-- **Advertisement Scanning**: Monitors BLE device broadcasts
-- **Device Names**: Matches against known surveillance device names
-- **MAC Address Filtering**: Detects devices by BLE MAC prefixes
-- **Service UUID Detection**: Identifies Raven devices by advertised service UUIDs
-- **Firmware Version Estimation**: Automatically determines Raven firmware version (1.1.x, 1.2.x, 1.3.x)
-- **Active Scanning**: Continuous monitoring with 100ms intervals
-
-### Real-World Database Integration
-Detection patterns are derived from actual field data including:
-- Flock Safety camera signatures
-- Penguin surveillance device patterns
-- Pigvision system identifiers
-- Raven acoustic gunshot detection devices (SoundThinking/ShotSpotter)
-- Extended battery and external antenna configurations
-
-**Datasets from deflock.me are included in the `datasets/` folder of this repository**, providing comprehensive device signatures and detection patterns for enhanced accuracy.
-
-### Raven Gunshot Detection System
-Flock You now includes specialized detection for **Raven acoustic gunshot detection devices** (by SoundThinking/ShotSpotter) using BLE service UUID fingerprinting:
-
-#### Detected Raven Services
-- **Device Information Service** (`0000180a-...`) - Serial number, model, firmware version
-- **GPS Location Service** (`00003100-...`) - Real-time device coordinates
-- **Power Management Service** (`00003200-...`) - Battery and solar panel status
-- **Network Status Service** (`00003300-...`) - LTE and WiFi connectivity information
-- **Upload Statistics Service** (`00003400-...`) - Data transmission metrics
-- **Error/Failure Service** (`00003500-...`) - System diagnostics and error logs
-- **Legacy Services** (`00001809-...`, `00001819-...`) - Older firmware versions (1.1.x)
-
-#### Firmware Version Detection
-The system automatically identifies Raven firmware versions based on advertised services:
-- **1.1.x (Legacy)**: Uses Health Thermometer and Location/Navigation services
-- **1.2.x**: Introduces GPS, Power, and Network services
-- **1.3.x (Latest)**: Full suite of diagnostic and monitoring services
-
-#### Raven Detection Output
-When a Raven device is detected, the system provides:
-- Device type identification: `RAVEN_GUNSHOT_DETECTOR`
-- Manufacturer: `SoundThinking/ShotSpotter`
-- Complete list of advertised service UUIDs
-- Service descriptions (GPS, Battery, Network status, etc.)
-- Estimated firmware version
-- Threat level: `CRITICAL` with score of 100
-
-**Configuration data sourced from `raven_configurations.json`** (provided by [GainSec](https://github.com/GainSec)) in the datasets folder, containing verified service UUIDs from firmware versions 1.1.7, 1.2.0, and 1.3.1.
-
-## Technical Specifications
-
-### WiFi Capabilities
-- **Frequency**: 2.4GHz only (13 channels)
-- **Mode**: Promiscuous monitoring
-- **Channel Hopping**: Automatic cycling every 2 seconds
-- **Packet Types**: Probe requests (0x04) and beacons (0x08)
-
-### BLE Capabilities
-- **Framework**: NimBLE-Arduino
-- **Scan Mode**: Active scanning
-- **Interval**: 100ms scan intervals
-- **Window**: 99ms scan windows
-
-### Audio System
-- **Boot Sequence**: 200Hz → 800Hz (300ms each)
-- **Detection Alert**: 1000Hz × 3 beeps (150ms each)
-- **Heartbeat**: 600Hz × 2 beeps (100ms each, 100ms gap)
-- **Frequency**: Every 10 seconds while device in range
-
-### JSON Output Format
-
-#### WiFi Detection Example
-```json
-{
-  "timestamp": 12345,
-  "detection_time": "12.345s",
-  "protocol": "wifi",
-  "detection_method": "probe_request",
-  "alert_level": "HIGH",
-  "device_category": "FLOCK_SAFETY",
-  "ssid": "Flock_Camera_001",
-  "rssi": -65,
-  "signal_strength": "MEDIUM",
-  "channel": 6,
-  "mac_address": "aa:bb:cc:dd:ee:ff",
-  "threat_score": 95,
-  "matched_patterns": ["ssid_pattern", "mac_prefix"],
-  "device_info": {
-    "manufacturer": "Flock Safety",
-    "model": "Surveillance Camera",
-    "capabilities": ["video", "audio", "gps"]
-  }
-}
-```
-
-#### Raven BLE Detection Example (NEW)
-```json
-{
-  "protocol": "bluetooth_le",
-  "detection_method": "raven_service_uuid",
-  "device_type": "RAVEN_GUNSHOT_DETECTOR",
-  "manufacturer": "SoundThinking/ShotSpotter",
-  "mac_address": "12:34:56:78:9a:bc",
-  "rssi": -72,
-  "signal_strength": "MEDIUM",
-  "device_name": "Raven-Device-001",
-  "raven_service_uuid": "00003100-0000-1000-8000-00805f9b34fb",
-  "raven_service_description": "GPS Location Service (Lat/Lon/Alt)",
-  "raven_firmware_version": "1.3.x (Latest)",
-  "threat_level": "CRITICAL",
-  "threat_score": 100,
-  "service_uuids": [
-    "0000180a-0000-1000-8000-00805f9b34fb",
-    "00003100-0000-1000-8000-00805f9b34fb",
-    "00003200-0000-1000-8000-00805f9b34fb",
-    "00003300-0000-1000-8000-00805f9b34fb",
-    "00003400-0000-1000-8000-00805f9b34fb",
-    "00003500-0000-1000-8000-00805f9b34fb"
-  ]
-}
-```
-
-## Usage
-
-### Startup Sequence
-1. **Power on** the Oui-Spy device
-2. **Listen for boot beeps** (low → high pitch)
-3. **Start the web server**: `python flockyou.py` (from the `api` directory)
-4. **Open the dashboard**: Navigate to `http://localhost:5000`
-5. **Connect devices**: Use the web interface to connect your Flock You device and GPS
-6. **System ready** when "hunting for Flock Safety devices" appears in the serial terminal
-
-### Detection Monitoring
-- **Web Dashboard**: Real-time detection display at `http://localhost:5000`
-- **Serial Terminal**: Live device output in the web interface
-- **Audio Alerts**: Immediate notification of detections (device-side)
-- **Heartbeat**: Continuous monitoring while devices in range
-- **Range Tracking**: Automatic detection of device departure
-- **Export Options**: Download detections as CSV or KML files
-
-### Channel Information
-- **WiFi**: Automatically hops through channels 1-13
-- **BLE**: Continuous scanning across all BLE channels
-- **Status Updates**: Channel changes logged to serial terminal
-
-## Detection Patterns
-
-### SSID Patterns
-- `flock*` - Flock Safety cameras
-- `Penguin*` - Penguin surveillance devices
-- `Pigvision*` - Pigvision systems
-- `FS_*` - Flock Safety variants
-
-### MAC Address Prefixes
-- `AA:BB:CC` - Flock Safety manufacturer codes
-- `DD:EE:FF` - Penguin device identifiers
-- `11:22:33` - Pigvision system codes
-
-### BLE Device Names
-- `Flock*` - Flock Safety BLE devices
-- `Penguin*` - Penguin BLE identifiers
-- `Pigvision*` - Pigvision BLE devices
-
-### Raven Service UUIDs (NEW)
-- `0000180a-0000-1000-8000-00805f9b34fb` - Device Information Service
-- `00003100-0000-1000-8000-00805f9b34fb` - GPS Location Service
-- `00003200-0000-1000-8000-00805f9b34fb` - Power Management Service
-- `00003300-0000-1000-8000-00805f9b34fb` - Network Status Service
-- `00003400-0000-1000-8000-00805f9b34fb` - Upload Statistics Service
-- `00003500-0000-1000-8000-00805f9b34fb` - Error/Failure Service
-- `00001809-0000-1000-8000-00805f9b34fb` - Health Service (Legacy 1.1.x)
-- `00001819-0000-1000-8000-00805f9b34fb` - Location Service (Legacy 1.1.x)
-
-## Limitations
-
-### Technical Constraints
-- **WiFi Range**: Limited to 2.4GHz spectrum
-- **Detection Range**: Approximately 50-100 meters depending on environment
-- **False Positives**: Possible with similar device signatures
-- **Battery Life**: Continuous scanning reduces battery runtime
-
-### Environmental Factors
-- **Interference**: Other WiFi networks may affect detection
-- **Obstacles**: Walls and structures reduce detection range
-- **Weather**: Outdoor conditions may impact performance
-
-## Troubleshooting
-
-### Common Issues
-1. **Web Server Won't Start**: Check Python version (3.8+) and virtual environment setup
-2. **No Serial Output**: Check USB connection and device port selection in web interface
-3. **No Audio**: Verify buzzer connection to GPIO3
-4. **No Detections**: Ensure device is in range and scanning is active
-5. **False Alerts**: Review detection patterns and adjust if needed
-6. **Connection Issues**: Verify device is connected via the web interface controls
-
-### Debug Information
-- **Web Dashboard**: Real-time status and connection monitoring at `http://localhost:5000`
-- **Serial Terminal**: Live device output in the web interface
-- **Channel Hopping**: Logs channel changes for debugging
-- **Detection Logs**: Full JSON output for analysis
-
-## Legal and Ethical Considerations
-
-### Intended Use
-- **Research and Education**: Understanding surveillance technology
-- **Security Assessment**: Evaluating privacy implications
-- **Technical Analysis**: Studying wireless communication patterns
-
-### Compliance
-- **Local Laws**: Ensure compliance with local regulations
-- **Privacy Rights**: Respect individual privacy and property rights
-- **Authorized Use**: Only use in authorized locations and situations
-
-## Credits and Research
-
-### Research Foundation
-This project is based on extensive research and public datasets from the surveillance detection community:
-
-- **[DeFlock](https://deflock.me)** - Crowdsourced ALPR location and reporting tool
-  - GitHub: [FoggedLens/deflock](https://github.com/FoggedLens/deflock)
-  - Provides comprehensive datasets and methodologies for surveillance device detection
-  - **Datasets included**: Real-world device signatures from deflock.me are included in the `datasets/` folder
-
-- **[GainSec](https://github.com/GainSec)** - OSINT and privacy research
-  - Specialized in surveillance technology analysis and detection methodologies
-  - **Research referenced**: Some methodologies are based on their published research on surveillance technology
-  - **Raven UUID Dataset Provider**: Contributed the `raven_configurations.json` dataset containing verified BLE service UUIDs from SoundThinking/ShotSpotter Raven devices across firmware versions 1.1.7, 1.2.0, and 1.3.1
-  - Enables precise detection of Raven acoustic gunshot detection devices through BLE service UUID fingerprinting
-
-### Methodology Integration
-Flock You unifies multiple known detection methodologies into a comprehensive scanner/wardriver specifically designed for Flock Safety cameras and similar surveillance devices. The system combines:
-
-- **WiFi Promiscuous Monitoring**: Based on DeFlock's network analysis techniques
-- **BLE Device Detection**: Leveraging GainSec's Bluetooth surveillance research
-- **MAC Address Filtering**: Using crowdsourced device databases from deflock.me
-- **BLE Service UUID Fingerprinting**: Identifying Raven devices through advertised service characteristics
-- **Firmware Version Detection**: Analyzing service combinations to determine device capabilities
-- **Pattern Recognition**: Implementing research-based detection algorithms
-
-### Acknowledgments
-Special thanks to the researchers and contributors who have made this work possible through their open-source contributions and public datasets:
-
-- **GainSec** for providing the comprehensive Raven BLE service UUID dataset, enabling detection of SoundThinking/ShotSpotter acoustic surveillance devices
-- **DeFlock** for crowdsourced surveillance camera location data and detection methodologies
-- The broader surveillance detection community for their continued research and privacy protection efforts
-
-This project builds upon their foundational work in surveillance detection and privacy protection.
-
-
-
-### Purchase Information
-**Oui-Spy devices are available exclusively at [colonelpanic.tech](https://colonelpanic.tech)**
-
-## License
-
-This project is provided for educational and research purposes. Please ensure compliance with all applicable laws and regulations in your jurisdiction.
+*A conceptual art project for school. Not a product. Just a little duck who needs you.*
 
 ---
 
-**Flock You: Professional surveillance detection for the privacy-conscious**
+## What Is This?
+
+Duck Buddy is a wearable plushie that detects Flock Safety surveillance cameras nearby and lets you know — by playing a random audio clip and shivering.
+
+The idea came from wanting to honor the work done by the open source surveillance detection community in a way that felt human, tactile, and a little absurd. A helpless rubber duck who can sense danger but can't do anything about it except shake and quack. The user has to get them both to safety.
+
+It is art. It is also functional. It is definitely a duck.
+
+---
+
+## The Concept
+
+Flock Safety cameras are networked surveillance devices deployed across cities, often without public awareness. They capture license plates, log movements, and feed data to law enforcement databases. Projects like **Flock You** (see below) have built open source tools to detect their presence using WiFi and Bluetooth signals the cameras emit.
+
+Duck Buddy takes that detection capability and puts it inside a plushie you can carry or wear. When the duck detects a Flock device nearby:
+
+- It plays a **random audio clip** from an onboard speaker
+- It **shivers** via a haptic motor
+
+There is also an **attract mode button** — press it and the duck performs its detection response without needing a real target nearby. This was added so people could understand what the duck does without having to stand next to a surveillance camera to demonstrate it.
+
+The goal was never to build a product. It was to make something that asks: *what if the thing warning you about surveillance was small, cute, and completely dependent on you?*
+
+---
+
+## Hardware
+
+| Component | Detail |
+|---|---|
+| Microcontroller | Seeed XIAO ESP32-C3 |
+| Audio | DFMini Player + speaker |
+| Haptic | ERM motor via MOSFET (100Ω gate resistor, flyback diode) |
+| Button | Momentary, active LOW on GPIO9 |
+| Power | USB or LiPo |
+
+### Pin Assignments
+
+| Function | GPIO | Notes |
+|---|---|---|
+| DFMini RX | GPIO4 | via 1kΩ resistor |
+| DFMini TX | GPIO5 | direct |
+| Haptic motor | GPIO10 | MOSFET gate |
+| Attract button | GPIO9 | active LOW, internal pull-up |
+
+### SD Card
+
+FAT32 formatted. Audio files named `001.mp3` through `025.mp3` in root directory.
+
+---
+
+## How It Works
+
+The firmware (built on the Flock You codebase) runs WiFi in promiscuous mode and continuously scans BLE advertisements, looking for:
+
+- Known Flock Safety SSIDs and MAC prefixes
+- Penguin and Pigvision surveillance device signatures
+- Raven gunshot detector BLE service UUIDs (SoundThinking/ShotSpotter)
+
+When a match is found, the duck plays a random track and triggers the haptic motor. It continues a heartbeat pulse every 10 seconds as long as the device remains in range.
+
+The attract mode button sets a flag that the main loop picks up — it plays a track and runs the haptic, then returns to scanning. One press, one response.
+
+For more detail on the detection methodology, the original projects are the right place to look.
+
+---
+
+## Standing On The Shoulders Of Ducks
+
+This project would not exist without the following people and their work:
+
+### colonelpanichacks — Flock You (Original)
+The original Flock You firmware. WiFi promiscuous mode detection, BLE scanning, MAC prefix matching, JSON output, the Flask dashboard — all of it originated here. Duck Buddy is built directly on this foundation.
+👉 https://github.com/colonelpanichacks/flock-you/tree/main
+
+### Storby42 — Flock You C3 OLED
+The ESP32-C3 port with OLED support that made it practical to run this on the XIAO form factor. The C3-specific adaptations in this project reference this work.
+👉 https://github.com/Storby42/flock-you-C3-OLED
+
+### DeFlock
+Crowdsourced ALPR camera location database and detection research. MAC prefix and SSID pattern databases draw from their work.
+👉 https://deflock.me — https://github.com/FoggedLens/deflock
+
+### GainSec
+Published the `raven_configurations.json` dataset containing verified BLE service UUIDs from SoundThinking/ShotSpotter Raven acoustic gunshot detection devices across firmware versions 1.1.7, 1.2.0, and 1.3.1. The Raven detection in this firmware would not be possible without their research.
+👉 https://github.com/GainSec
+
+---
+
+## Legal and Ethical Note
+
+This is a school art project exploring surveillance, privacy, and the emotional language of technology. It is not a product. It is not for sale. Passive WiFi and BLE monitoring laws vary by jurisdiction... know yours. This project does not connect to, interfere with, or transmit to any device it detects.
+
+---
+
+## License
+
+Educational and research use. Please respect the licenses of the upstream projects credited above.
+
+---
+
+*The duck cannot save itself. That's the point.*
